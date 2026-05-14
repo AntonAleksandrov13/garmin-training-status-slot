@@ -6,3 +6,5 @@ bin/
 /.claude/
 /.idea/
 /bin/
+*.der
+developer_key*

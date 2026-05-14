@@ -24,7 +24,11 @@ Built for AMOLED Garmin watches (epix2, fenix7/8, FR955/965, venu3). MIP devices
 
 ## Screenshots
 
-_Add screenshots from the simulator (`File → Save Screenshot`) under `docs/screenshots/` once you have them._
+<p align="center">
+  <img src="docs/screenshots/productive-status.png" alt="Productive status — full 10-point match" width="320">
+</p>
+
+A 10-point "PRODUCTIVE" reveal — all three reels land on the same status, segments turn green (PRODUCTIVE's color), and the score jumps by 10.
 
 ## Installation
 
