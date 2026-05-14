@@ -1,0 +1,8 @@
+bin/
+*.prg
+*.iq
+*.debug.xml
+.DS_Store
+/.claude/
+/.idea/
+/bin/

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings>
+    <string id="AppName">TrainingStatusSlot</string>
+    <string id="Productive">PRODUCTIVE</string>
+    <string id="Unproductive">UNPRODUCTIVE</string>
+    <string id="Maintaining">MAINTAINING</string>
+    <string id="Recovery">RECOVERY</string>
+    <string id="Detraining">DETRAINING</string>
+    <string id="Peaking">PEAKING</string>
+    <string id="Overreaching">OVERREACH</string>
+    <string id="Strained">STRAINED</string>
+    <string id="NoStatus">NO STATUS</string>
+</strings>
