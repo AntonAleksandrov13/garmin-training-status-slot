@@ -77,9 +77,30 @@ class BanditView extends WatchUi.WatchFace {
     }
 
     function onEnterSleep() as Void {
-        stopTimer();
+        // MIP displays stay visible in low power. If a spin is still running
+        // when the wrist drops, snap the reels to their final landed state so
+        // the always-on frame shows a clean, meaningful result instead of a
+        // frozen mid-spin blur. (Harmless on AMOLED too.)
+        if (_spinning || _waitingForStatus) {
+            settleNow();
+        } else {
+            stopTimer();
+        }
+    }
+
+    // Snap every reel to its final landed position, score it, stop the timer.
+    // Used both when the animation finishes naturally and when the device
+    // sleeps mid-spin (so MIP always-on shows the settled result).
+    function settleNow() as Void {
+        for (var i = 0; i < 3; i++) {
+            _rowOffset[i] = _rowTarget[i];
+            _rowLocked[i] = true;
+        }
         _spinning = false;
         _waitingForStatus = false;
+        evaluateScore();
+        stopTimer();
+        WatchUi.requestUpdate();
     }
 
     function triggerSpin() as Void {
@@ -199,9 +220,8 @@ class BanditView extends WatchUi.WatchFace {
         }
 
         if (allLocked) {
-            _spinning = false;
-            evaluateScore();
-            stopTimer();
+            settleNow();
+            return;
         }
         WatchUi.requestUpdate();
     }

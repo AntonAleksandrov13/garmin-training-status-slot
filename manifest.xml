@@ -1,19 +1,17 @@
 <?xml version="1.0"?>
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
     <iq:application entry="BanditApp" id="732baae7b0df4635b5e0c8dae0a1b708" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="3.2.0" name="@Strings.AppName" type="watchface" version="0.1.0">
-        <!-- Mainstream wrist watches. Niche models (golf approachs*, dive
-             descent*, aviation d2*/marq2aviator) intentionally excluded.
-             Mostly AMOLED; the fenix6 family (MIP) is kept for reach. -->
+        <!-- Mainstream wrist watches, AMOLED + MIP. Excluded by design:
+             niche lines (golf approachs*, dive descent*, aviation d2*/marq
+             aviator, novelty legacy hero/saga), and very old / non-round /
+             sub-208px low-memory devices (fr230/235/630/735xt/920xt, epix
+             gen1, vivoactive gen1, fenix3) where the layout can't fit. -->
         <iq:products>
+            <!-- AMOLED -->
             <iq:product id="epix2"/>
             <iq:product id="epix2pro42mm"/>
             <iq:product id="epix2pro47mm"/>
             <iq:product id="epix2pro51mm"/>
-            <iq:product id="fenix6"/>
-            <iq:product id="fenix6pro"/>
-            <iq:product id="fenix6s"/>
-            <iq:product id="fenix6spro"/>
-            <iq:product id="fenix6xpro"/>
             <iq:product id="fenix843mm"/>
             <iq:product id="fenix847mm"/>
             <iq:product id="fenix8pro47mm"/>
@@ -44,6 +42,48 @@
             <iq:product id="venux1"/>
             <iq:product id="vivoactive5"/>
             <iq:product id="vivoactive6"/>
+            <!-- MIP: fenix 5/6/7/8-solar -->
+            <iq:product id="fenix5plus"/>
+            <iq:product id="fenix5splus"/>
+            <iq:product id="fenix5xplus"/>
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7pronowifi"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix7xpronowifi"/>
+            <iq:product id="fenix8solar47mm"/>
+            <iq:product id="fenix8solar51mm"/>
+            <!-- MIP: Forerunner -->
+            <iq:product id="fr55"/>
+            <iq:product id="fr245"/>
+            <iq:product id="fr245m"/>
+            <iq:product id="fr255"/>
+            <iq:product id="fr255m"/>
+            <iq:product id="fr255s"/>
+            <iq:product id="fr255sm"/>
+            <iq:product id="fr645m"/>
+            <iq:product id="fr745"/>
+            <iq:product id="fr945"/>
+            <iq:product id="fr945lte"/>
+            <iq:product id="fr955"/>
+            <!-- MIP: enduro / vivoactive / instinct -->
+            <iq:product id="enduro"/>
+            <iq:product id="enduro3"/>
+            <iq:product id="vivoactive3m"/>
+            <iq:product id="vivoactive4"/>
+            <iq:product id="vivoactive4s"/>
+            <iq:product id="instinct3solar45mm"/>
+            <iq:product id="instincte40mm"/>
+            <iq:product id="instincte45mm"/>
+            <iq:product id="instinctcrossover"/>
         </iq:products>
         <iq:permissions>
             <iq:uses-permission id="ComplicationSubscriber"/>
