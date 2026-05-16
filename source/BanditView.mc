@@ -16,10 +16,16 @@ import Toybox.Position;
 class BanditView extends WatchUi.WatchFace {
 
     private const FRAME_MS as Number = 33;            // ~30fps
-    private const ROW_HEIGHT as Number = 80;          // vertical size of each segment cell
     private const SPIN_BASE_MS as Number = 1600;      // first column stop
     private const SPIN_STAGGER_MS as Number = 700;    // gap between column stops
     private const FULL_ROTATIONS as Number = 4;
+
+    // Layout scales to the device. Reference device is epix2 (~416 px high)
+    // where the original fixed pixel values were tuned. _rowH is the slot
+    // cell height; _scale multiplies the legacy offsets. Set in onLayout.
+    private const REF_H as Number = 416;
+    private var ROW_HEIGHT as Number = 80;            // slot cell height (device-scaled)
+    private var _scale as Float = 1.0;
 
     private var _timer as Timer.Timer?;
     private var _spinning as Boolean = false;
@@ -46,7 +52,21 @@ class BanditView extends WatchUi.WatchFace {
         if (stored != null) { _score = stored as Number; }
     }
 
-    function onLayout(dc as Dc) as Void {}
+    function onLayout(dc as Dc) as Void {
+        var h = dc.getHeight();
+        _scale = h.toFloat() / REF_H.toFloat();
+        // Slot cell ~19% of screen height, clamped so it stays legible on
+        // small screens (fenix6 ~260) and not oversized on large ones.
+        var rh = (h * 0.19).toNumber();
+        if (rh < 40) { rh = 40; }
+        if (rh > 80) { rh = 80; }
+        ROW_HEIGHT = rh;
+    }
+
+    // Scale a legacy (epix2-tuned) pixel offset to the current device.
+    function sc(px as Number) as Number {
+        return (px * _scale).toNumber();
+    }
 
     function onShow() as Void {
         triggerSpin();
@@ -257,6 +277,9 @@ class BanditView extends WatchUi.WatchFace {
         var colW = totalW / 3;
         var reelH = ROW_HEIGHT;
         var startX = ((w - totalW) / 2).toNumber();
+        // Slot vertically centered. With VO2 removed the content above
+        // (time + metrics) and below (metrics row + SCORE) is balanced, so no
+        // upward bias is needed — biasing up pushed the clock too high.
         var startY = ((h - reelH) / 2).toNumber();
 
         dc.setColor(0x303030, Graphics.COLOR_TRANSPARENT);
@@ -281,10 +304,6 @@ class BanditView extends WatchUi.WatchFace {
     function drawHeader(dc as Dc, w as Number, slotTopY as Number) as Void {
         var clock = System.getClockTime();
         var timeStr = clock.hour.format("%02d") + ":" + clock.min.format("%02d");
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(w / 2, slotTopY - 92, Graphics.FONT_NUMBER_MEDIUM, timeStr,
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-
         var now = Time.Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
         var dateStr = (now.day_of_week as String).toUpper() + " " + now.day.format("%d");
         var stats = System.getSystemStats();
@@ -295,25 +314,51 @@ class BanditView extends WatchUi.WatchFace {
 
         var tempStr = readTemperature();
         var sunsetStr = readSunset();
-
-        var rowY = slotTopY - 40;
         var battStr = battPct.format("%d") + "%";
 
-        // Three evenly-spread cells, each self-centered on its anchor
-        var anchors = [w / 2 - 100, w / 2, w / 2 + 100];
+        var rowH = dc.getFontHeight(Graphics.FONT_XTINY);
 
-        drawCell(dc, anchors[0], rowY, :thermometer, 0xFF9500,
+        // The slot frame border extends ROW_GAP_BORDER px past slotTopY.
+        // Both the metrics (date) row above and the data row below the slot
+        // use SLOT_ROW_GAP measured from the frame edge so the two gaps match.
+        var frameTop = slotTopY - 6;
+
+        // Metrics row: temp · DATE · battery, its bottom edge SLOT_ROW_GAP
+        // above the slot frame. Sits at a constant distance from the slot
+        // regardless of whether the sunset line is shown.
+        var rowCy = frameTop - slotRowGap() - rowH / 2;
+        var off = (w * 0.26).toNumber();
+        drawCell(dc, w / 2 - off, rowCy, :thermometer, 0xFF9500,
                  tempStr != null ? tempStr : "--", Graphics.COLOR_WHITE);
-        // Center cell: date (no icon)
         dc.setColor(0xAAAAAA, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(anchors[1], rowY, Graphics.FONT_XTINY, dateStr,
+        dc.drawText(w / 2, rowCy, Graphics.FONT_XTINY, dateStr,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        drawCell(dc, anchors[2], rowY, :battery, battColor, battStr, Graphics.COLOR_WHITE);
+        drawCell(dc, w / 2 + off, rowCy, :battery, battColor, battStr,
+                 Graphics.COLOR_WHITE);
 
-        // Sunset on a small line above the slot, centered
+        var cursorY = rowCy - rowH / 2 - sc(4);
+
+        // Sunset (when available) sits above the metrics row, not between it
+        // and the slot, so the date↔slot distance stays fixed.
         if (sunsetStr != null) {
-            drawCellCentered(dc, w / 2, slotTopY - 8, :sun, 0xFF9500, sunsetStr, Graphics.COLOR_WHITE);
+            drawCellCentered(dc, w / 2, cursorY - rowH / 2, :sun, 0xFF9500,
+                sunsetStr, Graphics.COLOR_WHITE);
+            cursorY -= rowH + sc(4);
         }
+
+        // Time above the row. FONT_NUMBER_MILD — one step smaller than the
+        // previous FONT_NUMBER_MEDIUM, per design feedback.
+        var timeFont = Graphics.FONT_NUMBER_MILD;
+        var timeH = dc.getFontHeight(timeFont);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, cursorY - sc(4) - timeH / 2, timeFont, timeStr,
+            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Visual gap between the slot frame edge and the adjacent metrics/data
+    // row, used identically top and bottom so the spacing is symmetric.
+    function slotRowGap() as Number {
+        return sc(16);
     }
 
     // Draw a (icon + value) cell whose overall width is centered on (cx, cy).
@@ -445,8 +490,12 @@ class BanditView extends WatchUi.WatchFace {
         if (info != null && (info has :floorsClimbed) && info.floorsClimbed != null) {
             floors = (info.floorsClimbed as Number).toString();
         }
-        // Data row directly below the slot.
-        var bottomY = slotY + slotH + 28;
+        // Data row below the slot, its top edge slotRowGap() below the slot
+        // frame — the same gap the metrics row uses above the slot, so the
+        // spacing is symmetric.
+        var rowH = dc.getFontHeight(Graphics.FONT_XTINY);
+        var frameBottom = slotY + slotH + 6;
+        var bottomY = frameBottom + slotRowGap() + rowH / 2;
         var span = (w * 0.78).toNumber();
         var x0 = (w - span) / 2;
         var step = span / 3;
@@ -456,11 +505,9 @@ class BanditView extends WatchUi.WatchFace {
         drawCellCentered(dc, x0 + 2 * step, bottomY, :bolt,   0x00C7FF, bb,     Graphics.COLOR_WHITE);
         drawCellCentered(dc, x0 + 3 * step, bottomY, :steps,  0x34C759, steps,  Graphics.COLOR_WHITE);
 
-        // VO2 Max big number under the metrics row, color = Garmin fitness level.
-        drawVO2Max(dc, w / 2, bottomY + 50);
-
-        // Current bandit score under the VO2 max line.
-        drawScore(dc, w / 2, bottomY + 84);
+        // SCORE a row below the data row.
+        var scoreCy = bottomY + rowH + sc(10);
+        drawScore(dc, w / 2, scoreCy);
     }
 
     function drawScore(dc as Dc, cx as Number, cy as Number) as Void {
@@ -481,29 +528,6 @@ class BanditView extends WatchUi.WatchFace {
         else if (_lastAward == 5) { color = 0x34C759; }
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(leftX + labelW + gap, cy, Graphics.FONT_XTINY, value,
-            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-    }
-
-    function drawVO2Max(dc as Dc, cx as Number, cy as Number) as Void {
-        var v = VO2MaxProvider.current();
-        if (v == null) { return; }
-        var level = VO2MaxProvider.levelFor(v as Number);
-        var color = VO2MaxProvider.colorFor(level);
-        var num = (v as Number).toString();
-        var label = "VO2";
-        var gap = 6;
-        var numW = dc.getTextWidthInPixels(num, Graphics.FONT_NUMBER_MILD);
-        var labelW = dc.getTextWidthInPixels(label, Graphics.FONT_XTINY);
-        var totalW = labelW + gap + numW;
-        var leftX = cx - totalW / 2;
-
-        // Dim label on the left
-        dc.setColor(0xAAAAAA, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(leftX, cy + 6, Graphics.FONT_XTINY, label,
-            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-        // Number right of label
-        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(leftX + labelW + gap, cy, Graphics.FONT_NUMBER_MILD, num,
             Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 

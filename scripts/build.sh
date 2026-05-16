@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# Builds the watch face for the simulator (.prg) and for the store (.iq).
+# Builds the watch face.
+#
+#   ./scripts/build.sh            debug .prg (one device) + release .iq (all)
+#   ./scripts/build.sh --all-prg  one per-device .prg for every manifest device
+#                                 into bin/prg/<device>.prg  (for USB sideload)
+#
+# A .prg is device-specific by design — there is no single universal .prg.
+# The .iq bundle is the "all devices" artifact (store / Garmin Express pick
+# the right binary per watch). Use --all-prg only if you sideload via USB.
 #
 # Env vars:
 #   CIQ_SDK     Path to the Connect IQ SDK. Defaults to the latest installed
@@ -11,8 +19,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-DEFAULT_SDK=$(ls -d "$HOME/Library/Application Support/Garmin/ConnectIQ/Sdks"/connectiq-sdk-mac-*/ 2>/dev/null | sort -r | head -n1)
-SDK="${CIQ_SDK:-${DEFAULT_SDK%/}}"
+MODE="${1:-default}"
+
+# Auto-detect SDK location across macOS / Linux.
+if [ -z "${CIQ_SDK:-}" ]; then
+  case "$(uname)" in
+    Darwin)
+      CIQ_SDK=$(ls -d "$HOME/Library/Application Support/Garmin/ConnectIQ/Sdks"/connectiq-sdk-mac-*/ 2>/dev/null | sort -r | head -n1)
+      ;;
+    Linux)
+      CIQ_SDK=$(ls -d "$HOME/.cache/connectiq"/connectiq-sdk-lin-*/ 2>/dev/null | sort -r | head -n1)
+      ;;
+  esac
+fi
+SDK="${CIQ_SDK%/}"
 KEY="${CIQ_KEY:-$HOME/developer_key.der}"
 DEVICE="${CIQ_DEVICE:-epix2}"
 
@@ -27,6 +47,33 @@ if [ ! -f "$KEY" ]; then
 fi
 
 mkdir -p bin
+
+if [ "$MODE" = "--all-prg" ]; then
+  mkdir -p bin/prg
+  devices=$(grep -oE 'iq:product id="[^"]+"' manifest.xml | sed 's/.*id="//;s/"//')
+  total=$(echo "$devices" | wc -w | tr -d ' ')
+  n=0
+  failed=""
+  for d in $devices; do
+    n=$((n + 1))
+    printf '[%2d/%s] %s ... ' "$n" "$total" "$d"
+    if "$SDK/bin/monkeyc" -d "$d" -f monkey.jungle \
+         -o "bin/prg/${d}.prg" -y "$KEY" >/dev/null 2>&1; then
+      echo "ok"
+    else
+      echo "FAILED"
+      failed="$failed $d"
+    fi
+  done
+  echo
+  if [ -n "$failed" ]; then
+    echo "Failed:$failed" >&2
+    exit 1
+  fi
+  echo "Done. Per-device .prg files in bin/prg/ (sideload the one matching"
+  echo "your watch to /Volumes/GARMIN/GARMIN/APPS/)."
+  exit 0
+fi
 
 echo "Building debug .prg for $DEVICE..."
 "$SDK/bin/monkeyc" -d "$DEVICE" -f monkey.jungle \

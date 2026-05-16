@@ -49,6 +49,20 @@ A 10-point "PRODUCTIVE" reveal — all three reels land on the same status, segm
 
 The release `.iq` package can be uploaded to <https://apps.garmin.com/developer/dashboard> as a private/hidden app. See [Garmin's docs](https://developer.garmin.com/connect-iq/connect-iq-faq/how-do-i-publish-an-app-to-the-connect-iq-store/) for the submission flow.
 
+## Screenshot pipeline
+
+Multi-device gallery generation is automated. With the simulator installed:
+
+```bash
+# Grant Terminal "Accessibility" permission once
+# (System Settings → Privacy & Security → Accessibility → enable Terminal).
+
+CIQ_KEY=~/garmin_dev_key.der ./scripts/screenshots.sh                    # all manifest devices
+CIQ_KEY=~/garmin_dev_key.der ./scripts/screenshots.sh epix2 venu3 fr165  # subset
+```
+
+Writes one PNG per device to `docs/screenshots/` and regenerates `docs/screenshots/INDEX.md`. See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the broader testing strategy.
+
 ## Building
 
 Requirements:
